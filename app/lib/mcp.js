@@ -96,16 +96,33 @@ export async function callMcpTool(sessionId, toolName, args) {
     typeof args === "object" &&
     !args.data
   ) {
-    const { module, entity, id, preview, ...rest } = args;
+    const { module, entity, id, preview, confirm, ...rest } = args;
     if (Object.keys(rest).length > 0) {
       const wrapped = { data: rest };
       if (module !== undefined) wrapped.module = module;
       if (entity !== undefined) wrapped.entity = entity;
       if (id !== undefined) wrapped.id = id;
       if (preview !== undefined) wrapped.preview = preview;
+      if (confirm !== undefined) wrapped.confirm = confirm;
       console.log("[FIX] Rewrapped flat args into data:", JSON.stringify(wrapped));
       args = wrapped;
     }
+  }
+
+  if (
+    (toolName === "create_record" || toolName === "update_record") &&
+    (!args ||
+      typeof args !== "object" ||
+      !args.data ||
+      typeof args.data !== "object" ||
+      Object.keys(args.data).length === 0)
+  ) {
+    console.log(`[FIX] ${toolName} called without data, returning hint to model`);
+    return (
+      `Ошибка: ${toolName} вызван без данных. Передай поля записи (name, budget, pipeline_id и т.д.) ` +
+      `внутри объекта "data". Пример: {"module":"crm","entity":"lead","data":{"name":"Тест","budget":100000}}. ` +
+      `Используй describe_entity, чтобы узнать точные имена полей нужной сущности, и повтори вызов с заполненным "data".`
+    );
   }
 
   if (toolName === "create_record" || toolName === "update_record") {
@@ -138,15 +155,47 @@ export async function callMcpTool(sessionId, toolName, args) {
   return JSON.stringify(data.result || data);
 }
 
+const CREATE_RECORD_HINT = `
+
+ОБЯЗАТЕЛЬНО: передавай данные записи в поле "data". Пример вызова для создания сделки:
+{
+  "module": "crm",
+  "entity": "lead",
+  "data": {
+    "name": "Название сделки",
+    "budget": 250000,
+    "pipeline_id": 5,
+    "pipeline_stage_id": 75,
+    "assignee_id": 390289
+  }
+}
+Без поля "data" запись НЕ создастся. Сначала вызови describe_entity, чтобы узнать точные имена полей, потом передай их внутри "data".
+НЕ передавай поля записи (name, budget, pipeline_id и т.п.) на верхнем уровне аргументов — только внутри "data".
+Если получил ошибку — прочитай её, исправь поля и попробуй ещё раз, не сдавайся после первой попытки.`;
+
+const UPDATE_RECORD_HINT = `
+
+ОБЯЗАТЕЛЬНО: передавай "id" записи и обновляемые поля в "data". Пример вызова:
+{
+  "module": "crm",
+  "entity": "lead",
+  "id": 12345,
+  "data": {
+    "name": "Новое название",
+    "budget": 300000
+  }
+}
+Без поля "data" обновление НЕ применится. Используй describe_entity, чтобы свериться с именами полей.
+НЕ передавай обновляемые поля на верхнем уровне аргументов — только внутри "data".
+Если получил ошибку — прочитай её, исправь поля и попробуй ещё раз, не сдавайся после первой попытки.`;
+
 export function mcpToolsToOpenAI(mcpTools) {
   return mcpTools.map((tool) => {
     let description = tool.description || "";
-    if (tool.name === "create_record" || tool.name === "update_record") {
-      description +=
-        "\n\nВАЖНО: поля сущности передавай ВНУТРИ объекта `data` как key/value, а не на верхнем уровне аргументов. " +
-        "Перед вызовом, если не уверен в именах и типах полей сущности — сначала вызови describe_entity для нужных module/entity. " +
-        'Пример: { "module": "crm", "entity": "deals", "data": { "name": "Сделка с ООО Ромашка", "budget": 250000 } }. ' +
-        "Если вернулась ошибка — прочитай её, исправь поля и попробуй ещё раз, не сдавайся после первой попытки.";
+    if (tool.name === "create_record") {
+      description += CREATE_RECORD_HINT;
+    } else if (tool.name === "update_record") {
+      description += UPDATE_RECORD_HINT;
     }
     return {
       type: "function",
