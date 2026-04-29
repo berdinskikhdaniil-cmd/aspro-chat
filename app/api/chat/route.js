@@ -6,6 +6,7 @@ import {
   getMcpTools,
   mcpToolsToOpenAI,
   callOpenRouter,
+  callMcpTool,
   runConversation,
 } from "../../lib/mcp";
 
@@ -30,6 +31,135 @@ const FETCH_HELP_TOOL = {
     },
   },
 };
+
+const CREATE_RECORD_TOOL = {
+  type: "function",
+  function: {
+    name: "create_crm_record",
+    description:
+      "Создать новую запись в CRM Аспро.Cloud (сделку, контакт и т.д.). " +
+      "Перед вызовом используй describe_entity чтобы узнать точные имена полей. " +
+      "Передавай поля записи напрямую как параметры этого инструмента.",
+    parameters: {
+      type: "object",
+      properties: {
+        module: {
+          type: "string",
+          description: "Имя модуля, например 'crm'",
+        },
+        entity: {
+          type: "string",
+          description:
+            "Имя сущности, например 'lead' для сделок, 'contact' для контактов",
+        },
+        name: {
+          type: "string",
+          description: "Название записи",
+        },
+        budget: {
+          type: "number",
+          description: "Бюджет (для сделок)",
+        },
+        pipeline_id: {
+          type: "number",
+          description: "ID воронки",
+        },
+        pipeline_stage_id: {
+          type: "number",
+          description: "ID этапа воронки",
+        },
+        assignee_id: {
+          type: "number",
+          description: "ID ответственного сотрудника",
+        },
+      },
+      required: ["module", "entity", "name"],
+      additionalProperties: true,
+    },
+  },
+};
+
+const UPDATE_RECORD_TOOL = {
+  type: "function",
+  function: {
+    name: "update_crm_record",
+    description:
+      "Обновить существующую запись в CRM Аспро.Cloud. " +
+      "Передавай ID записи и поля для обновления напрямую как параметры.",
+    parameters: {
+      type: "object",
+      properties: {
+        module: {
+          type: "string",
+          description: "Имя модуля, например 'crm'",
+        },
+        entity: {
+          type: "string",
+          description: "Имя сущности, например 'lead'",
+        },
+        id: {
+          type: "number",
+          description: "ID записи для обновления",
+        },
+      },
+      required: ["module", "entity", "id"],
+      additionalProperties: true,
+    },
+  },
+};
+
+async function createCrmRecord(args, sessionId) {
+  const { module, entity, ...fields } = args;
+
+  if (!module || !entity) {
+    return "Ошибка: укажи module и entity. Например module='crm', entity='lead'";
+  }
+
+  if (Object.keys(fields).length === 0) {
+    return "Ошибка: не переданы поля записи. Передай хотя бы name. Используй describe_entity чтобы узнать доступные поля.";
+  }
+
+  console.log(
+    `[CREATE] module=${module}, entity=${entity}, data=${JSON.stringify(fields)}`
+  );
+
+  const result = await callMcpTool(sessionId, "create_record", {
+    module,
+    entity,
+    data: fields,
+    confirm: true,
+  });
+
+  console.log(`[CREATE] result: ${result.slice(0, 500)}`);
+  return result;
+}
+
+async function updateCrmRecord(args, sessionId) {
+  const { module, entity, id, ...fields } = args;
+
+  if (!module || !entity || !id) {
+    return "Ошибка: укажи module, entity и id записи для обновления.";
+  }
+
+  if (Object.keys(fields).length === 0) {
+    return "Ошибка: не переданы поля для обновления. Используй describe_entity чтобы узнать доступные поля.";
+  }
+
+  console.log(
+    `[UPDATE] module=${module}, entity=${entity}, id=${id}, data=${JSON.stringify(fields)}`
+  );
+
+  const result = await callMcpTool(sessionId, "update_record", {
+    module,
+    entity,
+    id,
+    data: fields,
+    confirm: true,
+  });
+
+  console.log(`[UPDATE] result: ${result.slice(0, 500)}`);
+  return result;
+}
 
 function htmlToText(html, baseUrl) {
   let text = html
@@ -135,7 +265,17 @@ export async function POST(req) {
     }
 
     const mcpTools = await getMcpTools(sessionId);
-    const tools = [...mcpToolsToOpenAI(mcpTools), FETCH_HELP_TOOL];
+
+    const filteredMcpTools = mcpTools.filter(
+      (t) => t.name !== "create_record" && t.name !== "update_record"
+    );
+
+    const tools = [
+      ...mcpToolsToOpenAI(filteredMcpTools),
+      CREATE_RECORD_TOOL,
+      UPDATE_RECORD_TOOL,
+      FETCH_HELP_TOOL,
+    ];
 
     const systemMessage = {
       role: "system",
@@ -162,12 +302,10 @@ export async function POST(req) {
 - Данным CRM через MCP-инструменты (сделки, задачи, проекты и т.д.)
 - Документации Аспро.Cloud через инструмент fetch_aspro_help
 
-КРИТИЧЕСКИ ВАЖНО для create_record и update_record:
-- ВСЕ поля записи ДОЛЖНЫ быть внутри объекта "data".
-- Правильно: create_record({"module":"crm","entity":"lead","data":{"name":"Тест","budget":100000}})
-- НЕПРАВИЛЬНО: create_record({"module":"crm","entity":"lead","name":"Тест","budget":100000})
-- НЕПРАВИЛЬНО: create_record({"module":"crm","entity":"lead","confirm":true}) ← данные потеряны!
-- Перед созданием ВСЕГДА вызови describe_entity для нужного module/entity, чтобы узнать точные имена полей.
+Работа с записями CRM:
+- Для создания записей используй инструмент create_crm_record. Передавай поля записи напрямую как параметры: name, budget, pipeline_id, pipeline_stage_id, assignee_id и т.д. НЕ оборачивай их в объект data — инструмент сделает это сам.
+- Для обновления используй update_crm_record: передавай id записи и поля для изменения напрямую как параметры.
+- Перед созданием/обновлением ВСЕГДА вызови describe_entity для нужного module/entity, чтобы узнать точные имена полей.
 - Если получил ошибку — прочитай её, исправь поля и попробуй снова. Не сдавайся после первой неудачи и не говори пользователю «не могу», пока реально не исчерпал попытки исправления.
 
 Всегда отвечай на русском. Будь конкретным и практичным — как опытный внедренец CRM.`,
@@ -179,6 +317,8 @@ export async function POST(req) {
       tools,
       customTools: {
         fetch_aspro_help: fetchAsproHelp,
+        create_crm_record: (args) => createCrmRecord(args, sessionId),
+        update_crm_record: (args) => updateCrmRecord(args, sessionId),
       },
     });
 

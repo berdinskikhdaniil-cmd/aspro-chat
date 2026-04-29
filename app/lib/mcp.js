@@ -90,41 +90,6 @@ export async function getMcpTools(sessionId) {
 }
 
 export async function callMcpTool(sessionId, toolName, args) {
-  if (
-    (toolName === "create_record" || toolName === "update_record") &&
-    args &&
-    typeof args === "object" &&
-    !args.data
-  ) {
-    const { module, entity, id, preview, confirm, ...rest } = args;
-    if (Object.keys(rest).length > 0) {
-      const wrapped = { data: rest };
-      if (module !== undefined) wrapped.module = module;
-      if (entity !== undefined) wrapped.entity = entity;
-      if (id !== undefined) wrapped.id = id;
-      if (preview !== undefined) wrapped.preview = preview;
-      if (confirm !== undefined) wrapped.confirm = confirm;
-      console.log("[FIX] Rewrapped flat args into data:", JSON.stringify(wrapped));
-      args = wrapped;
-    }
-  }
-
-  if (
-    (toolName === "create_record" || toolName === "update_record") &&
-    (!args ||
-      typeof args !== "object" ||
-      !args.data ||
-      typeof args.data !== "object" ||
-      Object.keys(args.data).length === 0)
-  ) {
-    console.log(`[FIX] ${toolName} called without data, returning hint to model`);
-    return (
-      `Ошибка: ${toolName} вызван без данных. Передай поля записи (name, budget, pipeline_id и т.д.) ` +
-      `внутри объекта "data". Пример: {"module":"crm","entity":"lead","data":{"name":"Тест","budget":100000}}. ` +
-      `Используй describe_entity, чтобы узнать точные имена полей нужной сущности, и повтори вызов с заполненным "data".`
-    );
-  }
-
   if (toolName === "create_record" || toolName === "update_record") {
     console.log(`[DIAG] ${toolName} ARGS:`, JSON.stringify(args, null, 2));
   }
@@ -156,94 +121,14 @@ export async function callMcpTool(sessionId, toolName, args) {
 }
 
 export function mcpToolsToOpenAI(mcpTools) {
-  return mcpTools.map((tool) => {
-    if (tool.name === "create_record") {
-      return {
-        type: "function",
-        function: {
-          name: "create_record",
-          description:
-            (tool.description || "") +
-            "\n\nВАЖНО: поля записи передавай ТОЛЬКО внутри объекта data. " +
-            'Пример: {"module":"crm","entity":"lead","data":{"name":"Сделка","budget":100000,"pipeline_id":5}}',
-          parameters: {
-            type: "object",
-            properties: {
-              module: {
-                type: "string",
-                description: "Имя модуля, например 'crm'",
-              },
-              entity: {
-                type: "string",
-                description: "Имя сущности, например 'lead' для сделок",
-              },
-              data: {
-                type: "object",
-                description:
-                  "Объект с полями записи. Используй describe_entity чтобы узнать имена полей. Пример для сделки: {name, budget, pipeline_id, pipeline_stage_id, assignee_id}",
-                additionalProperties: true,
-              },
-              confirm: {
-                type: "boolean",
-                description: "true чтобы создать запись, false для превью",
-              },
-            },
-            required: ["module", "entity", "data"],
-          },
-        },
-      };
-    }
-
-    if (tool.name === "update_record") {
-      return {
-        type: "function",
-        function: {
-          name: "update_record",
-          description:
-            (tool.description || "") +
-            "\n\nВАЖНО: поля для обновления передавай ТОЛЬКО внутри объекта data. " +
-            'Пример: {"module":"crm","entity":"lead","id":123,"data":{"budget":200000}}',
-          parameters: {
-            type: "object",
-            properties: {
-              module: {
-                type: "string",
-                description: "Имя модуля, например 'crm'",
-              },
-              entity: {
-                type: "string",
-                description: "Имя сущности, например 'lead'",
-              },
-              id: {
-                type: "number",
-                description: "ID записи для обновления",
-              },
-              data: {
-                type: "object",
-                description:
-                  "Объект с полями для обновления. Используй describe_entity чтобы узнать имена полей.",
-                additionalProperties: true,
-              },
-              confirm: {
-                type: "boolean",
-                description: "true чтобы обновить запись, false для превью",
-              },
-            },
-            required: ["module", "entity", "id", "data"],
-          },
-        },
-      };
-    }
-
-    return {
-      type: "function",
-      function: {
-        name: tool.name,
-        description: tool.description || "",
-        parameters: tool.inputSchema || { type: "object", properties: {} },
-      },
-    };
-  });
+  return mcpTools.map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description || "",
+      parameters: tool.inputSchema || { type: "object", properties: {} },
+    },
+  }));
 }
 
 export async function callOpenRouter(messages, tools, options = {}) {
