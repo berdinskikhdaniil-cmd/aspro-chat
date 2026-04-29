@@ -155,53 +155,91 @@ export async function callMcpTool(sessionId, toolName, args) {
   return JSON.stringify(data.result || data);
 }
 
-const CREATE_RECORD_HINT = `
-
-ОБЯЗАТЕЛЬНО: передавай данные записи в поле "data". Пример вызова для создания сделки:
-{
-  "module": "crm",
-  "entity": "lead",
-  "data": {
-    "name": "Название сделки",
-    "budget": 250000,
-    "pipeline_id": 5,
-    "pipeline_stage_id": 75,
-    "assignee_id": 390289
-  }
-}
-Без поля "data" запись НЕ создастся. Сначала вызови describe_entity, чтобы узнать точные имена полей, потом передай их внутри "data".
-НЕ передавай поля записи (name, budget, pipeline_id и т.п.) на верхнем уровне аргументов — только внутри "data".
-Если получил ошибку — прочитай её, исправь поля и попробуй ещё раз, не сдавайся после первой попытки.`;
-
-const UPDATE_RECORD_HINT = `
-
-ОБЯЗАТЕЛЬНО: передавай "id" записи и обновляемые поля в "data". Пример вызова:
-{
-  "module": "crm",
-  "entity": "lead",
-  "id": 12345,
-  "data": {
-    "name": "Новое название",
-    "budget": 300000
-  }
-}
-Без поля "data" обновление НЕ применится. Используй describe_entity, чтобы свериться с именами полей.
-НЕ передавай обновляемые поля на верхнем уровне аргументов — только внутри "data".
-Если получил ошибку — прочитай её, исправь поля и попробуй ещё раз, не сдавайся после первой попытки.`;
-
 export function mcpToolsToOpenAI(mcpTools) {
   return mcpTools.map((tool) => {
-    let description = tool.description || "";
     if (tool.name === "create_record") {
-      description += CREATE_RECORD_HINT;
-    } else if (tool.name === "update_record") {
-      description += UPDATE_RECORD_HINT;
+      return {
+        type: "function",
+        function: {
+          name: "create_record",
+          description:
+            (tool.description || "") +
+            "\n\nВАЖНО: поля записи передавай ТОЛЬКО внутри объекта data. " +
+            'Пример: {"module":"crm","entity":"lead","data":{"name":"Сделка","budget":100000,"pipeline_id":5}}',
+          parameters: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                description: "Имя модуля, например 'crm'",
+              },
+              entity: {
+                type: "string",
+                description: "Имя сущности, например 'lead' для сделок",
+              },
+              data: {
+                type: "object",
+                description:
+                  "Объект с полями записи. Используй describe_entity чтобы узнать имена полей. Пример для сделки: {name, budget, pipeline_id, pipeline_stage_id, assignee_id}",
+                additionalProperties: true,
+              },
+              confirm: {
+                type: "boolean",
+                description: "true чтобы создать запись, false для превью",
+              },
+            },
+            required: ["module", "entity", "data"],
+          },
+        },
+      };
     }
+
+    if (tool.name === "update_record") {
+      return {
+        type: "function",
+        function: {
+          name: "update_record",
+          description:
+            (tool.description || "") +
+            "\n\nВАЖНО: поля для обновления передавай ТОЛЬКО внутри объекта data. " +
+            'Пример: {"module":"crm","entity":"lead","id":123,"data":{"budget":200000}}',
+          parameters: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                description: "Имя модуля, например 'crm'",
+              },
+              entity: {
+                type: "string",
+                description: "Имя сущности, например 'lead'",
+              },
+              id: {
+                type: "number",
+                description: "ID записи для обновления",
+              },
+              data: {
+                type: "object",
+                description:
+                  "Объект с полями для обновления. Используй describe_entity чтобы узнать имена полей.",
+                additionalProperties: true,
+              },
+              confirm: {
+                type: "boolean",
+                description: "true чтобы обновить запись, false для превью",
+              },
+            },
+            required: ["module", "entity", "id", "data"],
+          },
+        },
+      };
+    }
+
     return {
       type: "function",
       function: {
         name: tool.name,
-        description,
+        description: tool.description || "",
         parameters: tool.inputSchema || { type: "object", properties: {} },
       },
     };
