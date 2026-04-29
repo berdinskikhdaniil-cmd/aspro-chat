@@ -1,0 +1,605 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f6f8fb;
+  --card: #ffffff;
+  --text: #373737;
+  --text-secondary: #6b7280;
+  --accent: #2388FF;
+  --accent-hover: #0e6fe0;
+  --accent-soft: #eaf3ff;
+  --border: #e3e8ef;
+  --user-bg: #2388FF;
+  --user-text: #ffffff;
+  --bot-bg: #eef3f9;
+  --bot-text: #373737;
+  --input-bg: #ffffff;
+  --shadow: 0 1px 3px rgba(35, 136, 255, 0.08);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 860px;
+  margin: 0 auto;
+  transition: max-width 0.2s ease;
+}
+
+.app--wide {
+  max-width: 1400px;
+}
+
+/* ─── Header ─────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
+.header h1 {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.clear-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clear-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.chat-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 24px 0;
+}
+
+/* ─── Tabs ───────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.tab {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab--active {
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+/* ─── Messages area ──────────────────────────── */
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Welcome screen ─────────────────────────── */
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  gap: 12px;
+  padding: 40px 20px;
+}
+
+.welcome-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.welcome h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.welcome p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  max-width: 400px;
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+  max-width: 500px;
+}
+
+.suggestion {
+  padding: 10px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.suggestion:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ─── Message bubbles ────────────────────────── */
+
+.message {
+  display: flex;
+  gap: 12px;
+  max-width: 90%;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  background: var(--bot-bg);
+}
+
+.message.user .message-avatar {
+  background: var(--user-bg);
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.message-text {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message.user .message-text {
+  background: var(--user-bg);
+  color: var(--user-text);
+  border-bottom-right-radius: 4px;
+}
+
+.message.assistant .message-text {
+  background: var(--bot-bg);
+  color: var(--bot-text);
+  border-bottom-left-radius: 4px;
+}
+
+.message-text strong { font-weight: 700; }
+.message-text em { font-style: italic; }
+.message-text code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: rgba(35, 136, 255, 0.12);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.message.user .message-text code {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--user-text);
+}
+
+/* ─── Typing indicator ───────────────────────── */
+
+.typing {
+  display: flex;
+  gap: 5px;
+  padding: 14px 18px;
+  background: var(--bot-bg);
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+}
+
+.typing span {
+  width: 8px;
+  height: 8px;
+  background: #9ca3af;
+  border-radius: 50%;
+  animation: bounce 1.2s infinite ease-in-out;
+}
+
+.typing span:nth-child(2) { animation-delay: 0.15s; }
+.typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+/* ─── Input area ─────────────────────────────── */
+
+.input-area {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+
+.input-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.input-form input {
+  flex: 1;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input-form input:focus {
+  border-color: var(--accent);
+}
+
+.input-form input:disabled {
+  opacity: 0.6;
+}
+
+.input-form button {
+  width: 48px;
+  height: 48px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  border-radius: 12px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.input-form button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.input-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.powered-by {
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 10px;
+}
+
+/* ─── Scrollbar ──────────────────────────────── */
+
+.messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+/* ─── Dashboard ──────────────────────────────── */
+
+.dashboard {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dashboard-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dashboard-section-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.dashboard-section-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 3px 10px;
+  background: var(--bot-bg);
+  border-radius: 12px;
+}
+
+.dashboard-empty {
+  padding: 24px;
+  background: var(--card);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.dashboard-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.dashboard-state h3 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.dashboard-state p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-width: 480px;
+}
+
+.dashboard-error-icon {
+  font-size: 40px;
+}
+
+.dashboard-error-msg {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: var(--bot-bg);
+  padding: 10px 14px;
+  border-radius: 8px;
+  word-break: break-word;
+}
+
+.dashboard-retry {
+  margin-top: 8px;
+  padding: 10px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dashboard-retry:hover {
+  background: var(--accent-hover);
+}
+
+.dashboard-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Kanban columns ─────────────────────────── */
+
+.kanban {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.kanban-column {
+  flex: 0 0 280px;
+  background: var(--bot-bg);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 70vh;
+}
+
+.kanban-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.kanban-column-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kanban-column-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--card);
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.kanban-column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.task-card,
+.deal-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.task-card:hover,
+.deal-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.task-card-title,
+.deal-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.task-card-assignee,
+.deal-card-company {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.deal-card-amount {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+/* ─── Mobile ─────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .header { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
+  .messages { padding: 16px; }
+  .input-area { padding: 12px 16px 16px; }
+  .message { max-width: 95%; }
+  .welcome h2 { font-size: 19px; }
+  .suggestions { gap: 6px; }
+  .suggestion { font-size: 13px; padding: 8px 12px; }
+  .tabs { width: 100%; justify-content: stretch; }
+  .tab { flex: 1; padding: 8px 12px; font-size: 13px; }
+  .dashboard { padding: 16px; gap: 24px; }
+  .kanban-column { flex-basis: 240px; }
+  .chat-toolbar { padding: 12px 16px 0; }
+}
