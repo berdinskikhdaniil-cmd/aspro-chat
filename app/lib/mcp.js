@@ -73,6 +73,16 @@ export async function getMcpTools(sessionId) {
   if (data.result && data.result.tools) {
     cachedTools = data.result.tools;
     cachedToolsTime = Date.now();
+
+    const cr = data.result.tools.find((t) => t.name === "create_record");
+    if (cr) {
+      console.log("[DIAG] create_record schema:", JSON.stringify(cr.inputSchema, null, 2));
+    }
+    const ur = data.result.tools.find((t) => t.name === "update_record");
+    if (ur) {
+      console.log("[DIAG] update_record schema:", JSON.stringify(ur.inputSchema, null, 2));
+    }
+
     return cachedTools;
   }
 
@@ -80,11 +90,40 @@ export async function getMcpTools(sessionId) {
 }
 
 export async function callMcpTool(sessionId, toolName, args) {
+  if (
+    (toolName === "create_record" || toolName === "update_record") &&
+    args &&
+    typeof args === "object" &&
+    !args.data
+  ) {
+    const { module, entity, id, preview, ...rest } = args;
+    if (Object.keys(rest).length > 0) {
+      const wrapped = { data: rest };
+      if (module !== undefined) wrapped.module = module;
+      if (entity !== undefined) wrapped.entity = entity;
+      if (id !== undefined) wrapped.id = id;
+      if (preview !== undefined) wrapped.preview = preview;
+      console.log("[FIX] Rewrapped flat args into data:", JSON.stringify(wrapped));
+      args = wrapped;
+    }
+  }
+
+  if (toolName === "create_record" || toolName === "update_record") {
+    console.log(`[DIAG] ${toolName} ARGS:`, JSON.stringify(args, null, 2));
+  }
+
   const { data } = await mcpRequest(
     "tools/call",
     { name: toolName, arguments: args },
     sessionId
   );
+
+  if (toolName === "create_record" || toolName === "update_record") {
+    console.log(
+      `[DIAG] ${toolName} RESPONSE:`,
+      JSON.stringify(data, null, 2).slice(0, 3000)
+    );
+  }
 
   if (data.error) {
     return `Ошибка: ${data.error.message || JSON.stringify(data.error)}`;
@@ -100,14 +139,24 @@ export async function callMcpTool(sessionId, toolName, args) {
 }
 
 export function mcpToolsToOpenAI(mcpTools) {
-  return mcpTools.map((tool) => ({
-    type: "function",
-    function: {
-      name: tool.name,
-      description: tool.description || "",
-      parameters: tool.inputSchema || { type: "object", properties: {} },
-    },
-  }));
+  return mcpTools.map((tool) => {
+    let description = tool.description || "";
+    if (tool.name === "create_record" || tool.name === "update_record") {
+      description +=
+        "\n\nВАЖНО: поля сущности передавай ВНУТРИ объекта `data` как key/value, а не на верхнем уровне аргументов. " +
+        "Перед вызовом, если не уверен в именах и типах полей сущности — сначала вызови describe_entity для нужных module/entity. " +
+        'Пример: { "module": "crm", "entity": "deals", "data": { "name": "Сделка с ООО Ромашка", "budget": 250000 } }. ' +
+        "Если вернулась ошибка — прочитай её, исправь поля и попробуй ещё раз, не сдавайся после первой попытки.";
+    }
+    return {
+      type: "function",
+      function: {
+        name: tool.name,
+        description,
+        parameters: tool.inputSchema || { type: "object", properties: {} },
+      },
+    };
+  });
 }
 
 export async function callOpenRouter(messages, tools, options = {}) {
